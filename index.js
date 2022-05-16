@@ -1,7 +1,8 @@
 const qrcode = require('qrcode-terminal')
 const axios = require('axios')
 
-const { Client, LocalAuth } = require('whatsapp-web.js')
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js')
+
 const client = new Client({
     authStrategy: new LocalAuth()
 })
@@ -14,44 +15,121 @@ client.on('ready', () => {
     console.log('Client is ready')
 })
 
+const welcomeOptions = [
+    '!hola', 'buen día', 'buen', 'buenos', 'buenas', 'buena'
+]
+const byeOptions = [
+    '!adios', 'adíos', 'gracias', 'muchas'
+]
+
 client.on('message', async message => {
     const content = message.body
     const contentDiv = content.split(" ")
 
     const contentOption = contentDiv[0].toLowerCase()
     const contentSearch = contentDiv[1]
+    const contentDoc = contentDiv[2]
 
-    const welcomeOptions = [
-        'hola', 'buen día', 'buen dia','buenos días', 'buenas tardes','buena tarde'
-    ]
-
-    if (contentOption === welcomeOptions) {
-       const msgToSendWelcome = `Buen día, para consultar informacion necesaria solo escribre el nombre del dato que deseas y su identificador \n Ejemplo: \n Contenedor *YMLU5145696* \n Opciones disponibles: \nContenedor *busca informacion del contenedor* \nPrevio *Datos sobre los previos*`
+    //    if (welcomeOptions.includes('!hola')) {
+    if (content === '!hola') {
+        const msgToSendWelcome = `Buen día, para consultar informacion relevante solo escriba la accion y el identificador unico.\n \nEjemplo: \nContenedor YMLU5145696 \nPrevio ABJ2000002 \n\nOpciones disponibles: \nContenedor: *busca informacion del contenedor* \nPrevio: *Información sobre los previos*\nDocumento: *Se envia el documento del contenedor o previo solicitado*`
 
         client.sendMessage(message.from, msgToSendWelcome);
     } else if (contentOption === 'contenedor') {
+        console.log('entro a la opcion contenedor', contentOption)
+        console.log('contenedor del usuario', contentSearch)
 
-        const contenedor = await axios('http://localhost:8000/api/containers/2')
-            .then(res => res.data)
+        if (contentSearch) {
+            const contentSearchFormat = contentSearch.toUpperCase()
 
-        const msgToSend = `🚛 El contenedor es: ${contenedor.cntr_contenedor}\n🗺️Es de tipo: ${contenedor.cntr_tipo}\n📏Tamaño: ${contenedor.cntr_tamano}\n📝Pedimento: ${contenedor.cntr_pedimento}\n⬇️ Arribó el día: ${contenedor.cntr_fecha_arribo}`
+            const contenedor = await axios('http://localhost:8000/api/containers/' + contentSearchFormat)
+                .then(res => res.data)
+
+            if (contenedor[0]) {
+                console.log('contenedor', contenedor[0])
+                const msgToSendCntr = `🚛 El contenedor es: ${contenedor[0].cntr_contenedor}\n🗺️Es de tipo: ${contenedor[0].cntr_tipo}\n📏Tamaño: ${contenedor[0].cntr_tamano}\n📝Pedimento: ${contenedor[0].cntr_pedimento}\n⬇️ Arribó el día: ${contenedor[0].cntr_fecha_arribo}`
+                client.sendMessage(message.from, msgToSendCntr)
+            } else {
+                client.sendMessage(message.from, '❌ Lo siento no encontre información de ese contenedor\nIngresa un contenedor valido')
+            }
 
 
-        client.sendMessage(message.from, msgToSend)
-        console.log('entro a la opcion contenedor')
+            console.log('entro a la opcion contenedor')
+        } else {
+            client.sendMessage(message.from, '❌ Ingresa un valor en el contenedor para buscar\nEjemplo del formato de busqueda:\nContenedor YMLU5145696')
+        }
+
     } else if (contentOption === 'previo') {
-        const request = await axios('http://localhost:8000/api/previos/' + contentSearch)
-            .then(res => res.data)
 
-        const msgToSendCntr = `📑 Numero de previo: ${request[0].prev_consecutivo}\n🧱 Cantidad: ${request[0].prev_cantidad}\n⚖️ Peso: ${request[0].prev_peso}\n📍 Origen: ${request[0].prev_origen}`
-        client.sendMessage(message.from, msgToSendCntr)
+        if (contentSearch) {
+            const contentSearchFormat = contentSearch.toUpperCase()
+
+            const previo = await axios('http://localhost:8000/api/previos/' + contentSearchFormat)
+                .then(res => res.data)
+
+            if (previo[0]) {
+                console.log('previo', previo[0])
+                const msgToSendPrevio = `📑 Numero de previo: ${previo[0].prev_consecutivo}\n🧱 Cantidad: ${previo[0].prev_cantidad}\n⚖️ Peso: ${previo[0].prev_peso}\n📍 Origen: ${previo[0].prev_origen}`
+                client.sendMessage(message.from, msgToSendPrevio)
+            } else {
+                client.sendMessage(message.from, '❌ Lo siento no encontre información de ese previo\nIngresa un previo valido')
+            }
+            console.log('entro a la opcion contenedor')
+        } else {
+            client.sendMessage(message.from, '❌ Ingresa un valor en el previo para buscar\nEjemplo del formato de busqueda:\Previo ABJ2000002')
+        }
         console.log('entro a la opcion de previo')
+
+    } else if (contentOption === 'documento') {
+
+        if (contentSearch === 'contenedor') {
+            if (contentDoc) {
+                const contentDocFormat = contentDoc.toUpperCase()
+                const contenedor = await axios('http://localhost:8000/api/containers/' + contentDocFormat)
+                    .then(res => res.data)
+
+                if (contenedor[0]) {
+                    const cntrDoc = './pdf/contenedores/cntr-test.pdf'
+
+                    client.sendMessage(message.from, await MessageMedia.fromFilePath(cntrDoc));
+                } else {
+                    client.sendMessage(message.from, '❌ Lo siento no encontre algun documento de ese contenedor\nEjemplo del formato de busqueda:\nDocumento contenedor YMLU5145696')
+                }
+            } else {
+                client.sendMessage(message.from, '❌ Lo siento no encontre algun documento de ese contenedor\nEjemplo del formato de busqueda:\nDocumento contenedor YMLU5145696')
+            }
+        } else if (contentSearch === 'previo') {
+            if (contentDoc) {
+                const contentDocFormat = contentDoc.toUpperCase()
+                const previo = await axios('http://localhost:8000/api/previos/' + contentDocFormat)
+                    .then(res => res.data)
+
+                if (previo[0]) {
+                    const previoDoc = './pdf/previos/prev-test.pdf'
+
+                    client.sendMessage(message.from, await MessageMedia.fromFilePath(previoDoc));
+                } else {
+                    client.sendMessage(message.from, '❌ Lo siento no encontre algun documento de ese previo\nEjemplo del formato de busqueda:\nDocumento previo ABJ2000002')
+                }
+            }
+            else {
+                client.sendMessage(message.from, '❌ Lo siento no encontre algun documento de ese previo\nEjemplo del formato de busqueda:\nDocumento previo ABJ2000002')
+            }
+        } else {
+            client.sendMessage(message.from, '❌ Error de formato.\nEjemplo del formato de busqueda:\nDocumento contenedor YMLU5145696\nDocumento previo ABJ2000002')
+        }
+        console.log('entro a la opcion de documento')
+        //} else if (byeOptions.includes('!adios')) {
+    } else if (content === '!adios') {
+        const msgToSendBye = `Gracias por utilizar nuestro servicio hasta pronto\n 👋`
+
+        client.sendMessage(message.from, msgToSendBye);
     }
 })
 
 const apiTest = async () => {
     //constante que simula la opcion que eligio el user|
-    const content = 'previo ABJ2000002'
+    const content = 'Contenedor'
 
     //Se realiza el split de la palabra clave y el dato a buscar
     const contentDiv = content.split(" ")
@@ -62,9 +140,9 @@ const apiTest = async () => {
     //Dato para buscar en la bd
     const contentSearch = contentDiv[1]
 
-    console.log(contentSearch)
-
     // const msgToSendPrev = `El consecutivo es: ${}`
+
+    console.log(contentOption)
 
     if (contentOption === 'contenedor') {
         const request = await axios('http://localhost:8000/api/containers/' + contentSearch)
@@ -72,6 +150,7 @@ const apiTest = async () => {
 
         const msgToSendCntr = `🚛 El contenedor es: ${request[0].cntr_contenedor}\n🗺️ Es de tipo: ${request[0].cntr_tipo}\n📏Tamaño: ${request[0].cntr_tamano}\n📝Pedimento: ${request[0].cntr_pedimento}\n⬇️ Arribó el día: ${request[0].cntr_fecha_arribo}`
         console.log(msgToSendCntr)
+        console.log(request)
     } else if (contentOption === 'previo') {
         const request = await axios('http://localhost:8000/api/previos/' + contentSearch)
             .then(res => res.data)
@@ -79,12 +158,14 @@ const apiTest = async () => {
         const msgToSendCntr = `📑 Numero de previo: ${request[0].prev_consecutivo}\n🧱 Cantidad: ${request[0].prev_cantidad}\n⚖️ Peso: ${request[0].prev_peso}\n📍 Origen: ${request[0].prev_origen}`
         console.log(msgToSendCntr)
         console.log(request)
+    } else if (welcomeOptions.includes(contentOption)) {
+        console.log('entro al if de saludo')
     } else {
         console.log('No hay info')
     }
 
 }
 
-apiTest()
+//apiTest()
 
 client.initialize()

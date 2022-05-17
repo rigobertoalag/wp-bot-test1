@@ -13,6 +13,42 @@ client.on('qr', qr => {
 
 client.on('ready', () => {
     console.log('Client is ready')
+
+    notifyNewClient = async () => {
+        // Realizamos la consulta a la tabla temporal en busca de nuevas altas de clientes
+        const clnt = await axios('http://localhost:8000/api/clients-temp/')
+            .then(res => res.data)
+
+        // Si existe algun campo en la tabla temporal significa que no se ha notificado al cliente de su alta
+        if (clnt.clients[0]) {
+            // Tomamos el ID del cliente y de su registro temporal
+            const idToDelete = clnt.clients[0].new_clnt_id
+
+            //REalizamos la busqueda del numero de celular que al cual se enviara
+            const clntPhone = await axios('http://localhost:8000/api/clients-temp-phone/' + idToDelete)
+                .then(res => res.data)
+
+            console.log('consulta el phone ' + clntPhone.clients[0].clnt_phone)
+
+            //Eviamos el mensaje al numero tenia registrado
+            let chatId = "521" + clntPhone.clients[0].clnt_phone + "@c.us"
+            let msg = "*Bienvenido*\n\nEste es un chat para la atencion a clientes automatizada"
+
+            client.sendMessage(chatId, msg)
+                .then(response => {
+                    if (response.id.fromMe) {
+                        console.log('El mensaje fue enviado')
+                    }
+                })
+
+            //Eliminamos el registro de la tabla temporal
+            const deleteClnt = await axios.delete('http://localhost:8000/api/clients-temp/' + idToDelete)
+                .then(res => res.data)
+        }
+        // En caso de no ecnotrar nada en la tabla no hay clientes sin notificacion de alta
+        console.log('nothig to delete')
+    }
+    const checkClient = setInterval(notifyNewClient, 10000)
 })
 
 const welcomeOptions = [
@@ -129,7 +165,7 @@ client.on('message', async message => {
 
 const apiTest = async () => {
     //constante que simula la opcion que eligio el user|
-    const content = 'Contenedor'
+    const content = '!hola'
 
     //Se realiza el split de la palabra clave y el dato a buscar
     const contentDiv = content.split(" ")
@@ -164,8 +200,40 @@ const apiTest = async () => {
         console.log('No hay info')
     }
 
+    notifyNewClient = async () => {
+        // Realizamos la consulta a la tabla temporal en busca de nuevas altas de clientes
+        const clnt = await axios('http://localhost:8000/api/clients-temp/')
+            .then(res => res.data)
+
+        // Si existe algun campo en la tabla temporal significa que no se ha notificado al cliente de su alta
+        if (clnt.clients[0]) {
+            // Tomamos el ID del cliente y de su registro temporal
+            const idToDelete = clnt.clients[0].new_clnt_id
+
+            //REalizamos la busqueda del numero de celular que al cual se enviara
+            const clntPhone = await axios('http://localhost:8000/api/clients-temp-phone/' + idToDelete)
+                .then(res => res.data)
+
+            console.log('consulta el phone ' + clntPhone.clients[0].clnt_phone)
+
+            //Eviamos el mensaje al numero tenia registrado
+            console.log('manda mensaje al wp ' + idToDelete)
+
+
+            //Eliminamos el registro de la tabla temporal
+            const deleteClnt = await axios.delete('http://localhost:8000/api/clients-temp/' + idToDelete)
+                .then(res => res.data)
+        }
+        // En caso de no ecnotrar nada en la tabla no hay clientes sin notificacion de alta
+        console.log('nothig to delete')
+    }
+
+    // notifyNewClient()
+
+    // const checkClient = setInterval(notifyNewClient, 10000)
+
 }
 
-//apiTest()
+// apiTest()
 
 client.initialize()

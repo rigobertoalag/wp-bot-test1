@@ -25,14 +25,14 @@ client.on('ready', () => {
             const idToDelete = clnt.clients[0].new_clnt_id
 
             //REalizamos la busqueda del numero de celular que al cual se enviara
-            const clntPhone = await axios('http://localhost:8000/api/clients-temp-phone/' + idToDelete)
+            const clntData = await axios('http://localhost:8000/api/clients-temp-data/' + idToDelete)
                 .then(res => res.data)
 
-            console.log('consulta el phone ' + clntPhone.clients[0].clnt_phone)
+            console.log('consulta el phone ' + clntData.clients[0].clnt_phone)
 
             //Eviamos el mensaje al numero tenia registrado
-            let chatId = "521" + clntPhone.clients[0].clnt_phone + "@c.us"
-            let msg = "*Bienvenido*\n\nEste es un chat para la atencion a clientes automatizada"
+            let chatId = "521" + clntData.clients[0].clnt_phone + "@c.us"
+            let msg = `*Bienvenido*\nSe ha registrado este numero de teléfono con los siguientes datos:\n\n*RFC*: ${clntData.clients[0].clnt_rfc}\n*Nombre de cliente registrado*: ${clntData.clients[0].clnt_name}\n*Dirección*: ${clntData.clients[0].clnt_address} `
 
             client.sendMessage(chatId, msg)
                 .then(response => {
@@ -48,7 +48,43 @@ client.on('ready', () => {
         // En caso de no ecnotrar nada en la tabla no hay clientes sin notificacion de alta
         console.log('nothig to delete')
     }
-    const checkClient = setInterval(notifyNewClient, 10000)
+
+    notifyNewContainer = async () => {
+        // Realizamos la consulta a la tabla temporal en busca de nuevas altas de clientes
+        const cntr = await axios('http://localhost:8000/api/containers-temp/')
+            .then(res => res.data)
+
+        // Si existe algun campo en la tabla temporal significa que no se ha notificado al cliente de su alta
+        if (cntr.container[0]) {
+            // Tomamos el ID del contenedor y de su registro temporal
+            const idToDelete = cntr.container[0].new_cntr_id
+
+            const getClientToNotify = await axios('http://localhost:8000/api/containers-temp-data/' + idToDelete)
+                .then(res => res.data)
+
+            //Realizamos la busqueda del numero de celular que al cual se enviara
+            const getPhoneNotify = await axios('http://localhost:8000/api/clients-temp-data/' + getClientToNotify.container[0].cntr_clnt_id)
+                .then(res => res.data)
+
+            //Eviamos el mensaje al numero tenia registrado
+            let chatId = "521" + getPhoneNotify.clients[0].clnt_phone + "@c.us"
+            let msg = `Buen día,\n\nSe ha dado de alta con exito el contenedor que solicito los datos son:\n\nContenedor: *${getClientToNotify.container[0].cntr_contenedor}*\nTipo: *${getClientToNotify.container[0].cntr_tipo}*\nTamaño: *${getClientToNotify.container[0].cntr_tamano}*\nLleno / Vacio: *${getClientToNotify.container[0].cntr_lleno_vacio}*\nPedimento: *${getClientToNotify.container[0].cntr_pedimento}*\nEstatus: *${getClientToNotify.container[0].cntr_status}*`
+
+            client.sendMessage(chatId, msg)
+                .then(response => {
+                    if (response.id.fromMe) {
+                        console.log('El mensaje de contenedor fue enviado')
+                        // Eliminamos el registro de la tabla temporal
+                        const deleteClnt = axios.delete('http://localhost:8000/api/containers-temp/' + idToDelete)
+                            .then(res => res.data)
+                    }
+                })
+        }
+        // En caso de no ecnotrar nada en la tabla no hay clientes sin notificacion de alta
+        console.log('nothig to delete')
+    }
+    const checkClient = setInterval((notifyNewClient), 10000)
+    const checkContainer = setInterval((notifyNewContainer), 30000)
 })
 
 const welcomeOptions = [
@@ -228,12 +264,56 @@ const apiTest = async () => {
         console.log('nothig to delete')
     }
 
+    notifyNewContainer = async () => {
+        // Realizamos la consulta a la tabla temporal en busca de nuevas altas de clientes
+        const cntr = await axios('http://localhost:8000/api/containers-temp/')
+            .then(res => res.data)
+        console.log('cntr', cntr)
+
+        // Si existe algun campo en la tabla temporal significa que no se ha notificado al cliente de su alta
+        if (cntr.container[0]) {
+            // Tomamos el ID del contenedor y de su registro temporal
+            const idToDelete = cntr.container[0].new_cntr_id
+            console.log('idToDelete', idToDelete)
+
+            const getClientToNotify = await axios('http://localhost:8000/api/containers-temp-data/' + idToDelete)
+                .then(res => res.data)
+            console.log('getClientToNotify', getClientToNotify)
+            console.log('getClientToNotify transform', getClientToNotify.container[0].cntr_clnt_id)
+
+            //Realizamos la busqueda del numero de celular que al cual se enviara
+            const getPhoneNotify = await axios('http://localhost:8000/api/clients-temp-data/' + getClientToNotify.container[0].cntr_clnt_id)
+                .then(res => res.data)
+            console.log('getPhoneNotify', getPhoneNotify)
+
+            console.log('consulta el phone ' + getPhoneNotify.clients[0].clnt_phone)
+
+            //Eviamos el mensaje al numero tenia registrado
+            let chatId = "521" + getPhoneNotify.clients[0].clnt_phone + "@c.us"
+            //let msg = `*Bienvenido*\nSe ha registrado este numero de teléfono con los siguientes datos:\n\n*RFC*: ${clntData.clients[0].clnt_rfc}\n*Nombre de cliente registrado*: ${clntData.clients[0].clnt_name}\n*Dirección*: ${clntData.clients[0].clnt_address} `
+
+            // client.sendMessage(chatId, msg)
+            //     .then(response => {
+            //         if (response.id.fromMe) {
+            //             console.log('El mensaje fue enviado')
+            //         }
+            //     })
+
+            // Eliminamos el registro de la tabla temporal
+            const deleteClnt = await axios.delete('http://localhost:8000/api/containers-temp/' + idToDelete)
+                .then(res => res.data)
+        }
+        // En caso de no ecnotrar nada en la tabla no hay clientes sin notificacion de alta
+        console.log('nothig to delete')
+    }
+
     // notifyNewClient()
+    notifyNewContainer()
 
     // const checkClient = setInterval(notifyNewClient, 10000)
 
 }
 
-// apiTest()
+//apiTest()
 
 client.initialize()

@@ -68,7 +68,7 @@ client.on('ready', () => {
 
             //Eviamos el mensaje al numero tenia registrado
             let chatId = "521" + getPhoneNotify.clients[0].clnt_phone + "@c.us"
-            let msg = `Buen día,\n\nSe ha dado de alta con exito el contenedor que solicito los datos son:\n\nContenedor: *${getClientToNotify.container[0].cntr_contenedor}*\nTipo: *${getClientToNotify.container[0].cntr_tipo}*\nTamaño: *${getClientToNotify.container[0].cntr_tamano}*\nLleno / Vacio: *${getClientToNotify.container[0].cntr_lleno_vacio}*\nPedimento: *${getClientToNotify.container[0].cntr_pedimento}*\nEstatus: *${getClientToNotify.container[0].cntr_status}*`
+            let msg = `Buen día,\n\nSe ha dado de alta con exito el contenedor que solicito, los datos son:\n\nContenedor: *${getClientToNotify.container[0].cntr_contenedor}*\nTipo: *${getClientToNotify.container[0].cntr_tipo}*\nTamaño: *${getClientToNotify.container[0].cntr_tamano}*\nLleno / Vacio: *${getClientToNotify.container[0].cntr_lleno_vacio === 'E' ? 'Vacio' : 'Lleno'}*\nPedimento: *${getClientToNotify.container[0].cntr_pedimento}*\nEstatus: *${getClientToNotify.container[0].cntr_status}*`
 
             client.sendMessage(chatId, msg)
                 .then(response => {
@@ -117,9 +117,9 @@ client.on('message', async message => {
             const contenedor = await axios('http://localhost:8000/api/containers/' + contentSearchFormat)
                 .then(res => res.data)
 
-            if (contenedor[0]) {
-                console.log('contenedor', contenedor[0])
-                const msgToSendCntr = `🚛 El contenedor es: ${contenedor[0].cntr_contenedor}\n🗺️Es de tipo: ${contenedor[0].cntr_tipo}\n📏Tamaño: ${contenedor[0].cntr_tamano}\n📝Pedimento: ${contenedor[0].cntr_pedimento}\n⬇️ Arribó el día: ${contenedor[0].cntr_fecha_arribo}`
+            if (contenedor.container[0]) {
+                console.log('contenedor', contenedor.container[0])
+                const msgToSendCntr = `🚛 El contenedor es: ${contenedor.container[0].cntr_contenedor}\n🗺️Es de tipo: ${contenedor.container[0].cntr_tipo}\n📏Tamaño: ${contenedor.container[0].cntr_tamano}\n📝Pedimento: ${contenedor.container[0].cntr_pedimento}\n⬇️ Arribó el día: ${contenedor.container[0].cntr_fecha_arribo}`
                 client.sendMessage(message.from, msgToSendCntr)
             } else {
                 client.sendMessage(message.from, '❌ Lo siento no encontre información de ese contenedor\nIngresa un contenedor valido')

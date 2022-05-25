@@ -4,7 +4,7 @@ const axios = require('axios')
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js')
 
 const client = new Client({
-    authStrategy: new LocalAuth()
+    authStrategy: new NoAuth()
 })
 
 client.on('qr', qr => {
